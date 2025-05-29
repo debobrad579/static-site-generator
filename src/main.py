@@ -1,4 +1,4 @@
-import os, shutil
+import os, shutil, sys
 
 from block import BlockType, block_to_block_type, markdown_to_blocks, markdown_to_html_node
 
@@ -41,7 +41,7 @@ def extract_title(markdown: str):
     raise Exception("No header found.")
 
 
-def generate_page(from_path: str, template_path: str, dest_path: str):
+def generate_page(from_path: str, template_path: str, dest_path: str, basepath: str):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
 
     with open(from_path) as file:
@@ -51,26 +51,27 @@ def generate_page(from_path: str, template_path: str, dest_path: str):
 
         with open(template_path) as template_file:
             template = template_file.read()
-            html = template.replace("{{ Title }}", title).replace("{{ Content }}", content)
+            html = template.replace("{{ Title }}", title).replace("{{ Content }}", content).replace('href="/', f'href="{basepath}').replace('src="/', f'src="{basepath}')
 
             with open(dest_path, "w") as dest_file:
                 dest_file.write(html)
 
 
-def generate_pages_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_pages_recursive(dir_path_content: str, template_path: str, dest_dir_path: str, basepath: str):
     if not os.path.exists(dir_path_content): raise Exception("Content directory does not exist.")
     if not os.path.exists(dest_dir_path): os.mkdir(dest_dir_path)
 
     for path in os.listdir(dir_path_content):
         content_path = os.path.join(dir_path_content, path)
         dest_path = os.path.join(dest_dir_path, path.replace(".md", ".html"))
-        if os.path.isfile(content_path): generate_page(content_path, template_path, dest_path)
-        else: generate_pages_recursive(content_path, template_path, dest_path)
+        if os.path.isfile(content_path): generate_page(content_path, template_path, dest_path, basepath)
+        else: generate_pages_recursive(content_path, template_path, dest_path, basepath)
 
 
 def main():
-    copy_content("static", "public")
-    generate_pages_recursive("content", "template.html", "public")
+    basepath = sys.argv[0] or "/"
+    copy_content("static", "docs")
+    generate_pages_recursive("content", "template.html", "public", basepath)
 
 
 if __name__ == "__main__":
